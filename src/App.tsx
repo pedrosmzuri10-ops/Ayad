@@ -9,6 +9,7 @@ import { PurchasesTab } from './components/PurchasesTab';
 import { ReportsTab } from './components/ReportsTab';
 import { BarcodeTab } from './components/BarcodeTab';
 import { ReceiptModal } from './components/ReceiptModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 const AppContent: React.FC = () => {
   const { activeTab, language, viewingInvoice, setViewingInvoice } = useApp();
@@ -33,6 +34,9 @@ const AppContent: React.FC = () => {
 
       {/* Persistent Bottom Navigation */}
       <BottomNav />
+
+      {/* Connectivity Indicator */}
+      <OfflineIndicator />
 
       {/* Printable Receipt Modal */}
       {viewingInvoice && (

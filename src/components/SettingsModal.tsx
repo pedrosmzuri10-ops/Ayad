@@ -8,8 +8,10 @@ import {
   RefreshCw,
   Check,
   ShieldAlert,
+  Monitor,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { DesktopShortcutModal } from './DesktopShortcutModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [importText, setImportText] = useState('');
   const [showImportBox, setShowImportBox] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [showShortcutModal, setShowShortcutModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -230,6 +233,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           )}
         </div>
 
+        {/* Desktop Shortcut & Installation */}
+        <div className="pt-3 border-t border-slate-100 space-y-2">
+          <label className="block text-xs font-bold text-slate-700">شۆرتکەت و ئەپی کۆمپیوتەر</label>
+          <button
+            type="button"
+            onClick={() => setShowShortcutModal(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-all cursor-pointer border border-blue-200"
+          >
+            <Monitor className="w-4 h-4 text-blue-600" />
+            <span>داگرتنی شۆرتکەت بۆ سەر دێسکتۆپ (Desktop Shortcut / PWA)</span>
+          </button>
+        </div>
+
         {/* Reset to Zero Data */}
         <div className="pt-3 border-t border-slate-100">
           {!resetConfirm ? (
@@ -270,6 +286,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           )}
         </div>
       </div>
+
+      {showShortcutModal && (
+        <DesktopShortcutModal
+          isOpen={showShortcutModal}
+          onClose={() => setShowShortcutModal(false)}
+        />
+      )}
     </div>
   );
 };
