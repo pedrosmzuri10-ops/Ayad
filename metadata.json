@@ -1,0 +1,6 @@
+{
+  "name": "Pedros POS & Inventory System",
+  "description": "سیستەمی پێشکەوتووی بەڕێوەبردنی فرۆشتن، کۆگا، قەرزەکان، کڕین و ژمێریاری (Pedros POS & ERP System)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
