@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   initialCategories,
   initialCustomers,
@@ -27,6 +27,7 @@ import {
   ShopSettings,
   Supplier,
 } from '../types';
+import { syncService, AppSyncData, SyncStatus } from '../services/syncService';
 
 export type TabType = 'reports' | 'pos' | 'warehouse' | 'purchases' | 'debts' | 'barcode';
 
@@ -135,6 +136,14 @@ interface AppContextType {
   // Active Viewing Invoice for Receipt Modal
   viewingInvoice: Invoice | null;
   setViewingInvoice: (invoice: Invoice | null) => void;
+
+  // Real-time Cross-Device Sync (Computer & Mobile)
+  syncStatus: SyncStatus;
+  deviceType: 'computer' | 'mobile';
+  lastSyncTime: Date | null;
+  forceSync: () => Promise<void>;
+  isSyncModalOpen: boolean;
+  setIsSyncModalOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -248,9 +257,106 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEY + '_payments', JSON.stringify(payments));
   }, [payments]);
 
+  // Real-time Cross-Device Sync State
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('connected');
+  const [deviceType, setDeviceType] = useState<'computer' | 'mobile'>('computer');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const isApplyingRemoteUpdate = useRef(false);
+
+  // Initialize syncService on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY + '_settings', JSON.stringify(settings));
-  }, [settings]);
+    setDeviceType(syncService.getDeviceType());
+    setSyncStatus(syncService.getStatus());
+    setLastSyncTime(syncService.getLastSyncTime());
+
+    const unsubStatus = syncService.onStatusChange((status) => {
+      setSyncStatus(status);
+      setLastSyncTime(syncService.getLastSyncTime());
+    });
+
+    const unsubRemote = syncService.onRemoteUpdate((remoteData) => {
+      isApplyingRemoteUpdate.current = true;
+      if (remoteData.items) setItems(remoteData.items);
+      if (remoteData.categories) setCategories(remoteData.categories);
+      if (remoteData.customers) setCustomers(remoteData.customers);
+      if (remoteData.suppliers) setSuppliers(remoteData.suppliers);
+      if (remoteData.invoices) setInvoices(remoteData.invoices);
+      if (remoteData.purchases) setPurchases(remoteData.purchases);
+      if (remoteData.expenses) setExpenses(remoteData.expenses);
+      if (remoteData.payments) setPayments(remoteData.payments);
+      if (remoteData.settings) setSettings(remoteData.settings);
+
+      setLastSyncTime(new Date());
+
+      setTimeout(() => {
+        isApplyingRemoteUpdate.current = false;
+      }, 300);
+    });
+
+    const savedTime = localStorage.getItem(STORAGE_KEY + '_last_updated');
+    const initialTimestamp = savedTime ? parseInt(savedTime, 10) : 0;
+    syncService.startSync(initialTimestamp);
+
+    return () => {
+      unsubStatus();
+      unsubRemote();
+      syncService.stopSync();
+    };
+  }, []);
+
+  // Sync to backend whenever any state changes
+  useEffect(() => {
+    if (isApplyingRemoteUpdate.current) return;
+    const now = Date.now();
+    localStorage.setItem(STORAGE_KEY + '_last_updated', now.toString());
+
+    const payload: AppSyncData = {
+      items,
+      categories,
+      customers,
+      suppliers,
+      invoices,
+      purchases,
+      expenses,
+      payments,
+      settings,
+    };
+    syncService.pushState(payload, now);
+  }, [items, categories, customers, suppliers, invoices, purchases, expenses, payments, settings]);
+
+  const forceSync = async () => {
+    const payload: AppSyncData = {
+      items,
+      categories,
+      customers,
+      suppliers,
+      invoices,
+      purchases,
+      expenses,
+      payments,
+      settings,
+    };
+    const now = Date.now();
+    syncService.pushState(payload, now);
+    const remote = await syncService.fetchLatest();
+    if (remote) {
+      isApplyingRemoteUpdate.current = true;
+      if (remote.items) setItems(remote.items);
+      if (remote.categories) setCategories(remote.categories);
+      if (remote.customers) setCustomers(remote.customers);
+      if (remote.suppliers) setSuppliers(remote.suppliers);
+      if (remote.invoices) setInvoices(remote.invoices);
+      if (remote.purchases) setPurchases(remote.purchases);
+      if (remote.expenses) setExpenses(remote.expenses);
+      if (remote.payments) setPayments(remote.payments);
+      if (remote.settings) setSettings(remote.settings);
+      setLastSyncTime(new Date());
+      setTimeout(() => {
+        isApplyingRemoteUpdate.current = false;
+      }, 300);
+    }
+  };
 
   // Format number with commas
   const formatNumber = (n: number) => {
@@ -814,6 +920,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         importDataJson,
         viewingInvoice,
         setViewingInvoice,
+        syncStatus,
+        deviceType,
+        lastSyncTime,
+        forceSync,
+        isSyncModalOpen,
+        setIsSyncModalOpen,
       }}
     >
       {children}
