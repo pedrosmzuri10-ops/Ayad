@@ -14,6 +14,7 @@ import {
   Receipt,
   PlusCircle,
   MinusCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PurchaseInvoiceItem, Supplier } from '../types';
@@ -43,7 +44,10 @@ export const PurchasesTab: React.FC = () => {
   >([]);
   const [purchasePaymentType, setPurchasePaymentType] = useState<'cash' | 'debt' | 'half'>('debt');
   const [cashPaidInput, setCashPaidInput] = useState<string>('0');
+  const [purchaseDebtDate, setPurchaseDebtDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [purchaseDueDate, setPurchaseDueDate] = useState<string>('');
   const [purchaseNote, setPurchaseNote] = useState<string>('');
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   // Selected item to add to purchase
   const [itemToAddId, setItemToAddId] = useState<string>(items[0]?.id || '');
@@ -59,6 +63,7 @@ export const PurchasesTab: React.FC = () => {
     const targetItem = items.find((i) => i.id === itemToAddId);
     if (!targetItem) return;
 
+    setPurchaseError(null);
     const qty = parseInt(itemToAddQty, 10) || 1;
     const cost = parseFloat(itemToAddCost) || targetItem.buyPrice;
 
@@ -105,9 +110,11 @@ export const PurchasesTab: React.FC = () => {
   const handleSubmitPurchase = (e: React.FormEvent) => {
     e.preventDefault();
     if (purchaseItems.length === 0) {
-      alert('تکایە لانیکەم یەک کاڵا زیادبکە بۆ پسوولەی کڕین!');
+      setPurchaseError('تکایە لانیکەم یەک کاڵا زیادبکە بۆ پسوولەی کڕین!');
       return;
     }
+
+    setPurchaseError(null);
 
     const supplier = suppliers.find((s) => s.id === selectedSupplierId) || suppliers[0];
 
@@ -126,6 +133,8 @@ export const PurchasesTab: React.FC = () => {
       total: purchaseSubtotal,
       cashPaid: calculatedCashPaid,
       debtAmount: calculatedDebtAmount,
+      debtDate: calculatedDebtAmount > 0 ? purchaseDebtDate : undefined,
+      dueDate: calculatedDebtAmount > 0 ? (purchaseDueDate.trim() || undefined) : undefined,
       note: purchaseNote || purchaseItems.map((pi) => `${pi.nameKu} (${pi.quantity})`).join('، '),
     });
 
@@ -133,6 +142,8 @@ export const PurchasesTab: React.FC = () => {
     setPurchaseItems([]);
     setPurchaseNote('');
     setCashPaidInput('0');
+    setPurchaseDebtDate(new Date().toISOString().split('T')[0]);
+    setPurchaseDueDate('');
   };
 
   return (
@@ -364,6 +375,13 @@ export const PurchasesTab: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmitPurchase} className="space-y-3.5">
+              {purchaseError && (
+                <div className="bg-rose-50 border border-rose-300 rounded-xl p-2.5 flex items-center gap-2 text-rose-800 text-xs font-bold">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{purchaseError}</span>
+                </div>
+              )}
+
               {/* Supplier Selection */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -532,6 +550,40 @@ export const PurchasesTab: React.FC = () => {
                       <label className="block text-[10px] text-slate-500">ماوەی قەرز:</label>
                       <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-purple-700">
                         {formatMoney(calculatedDebtAmount)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Debt Date & Repayment Due Date to Supplier */}
+                {(purchasePaymentType === 'debt' || purchasePaymentType === 'half') && (
+                  <div className="bg-purple-50/80 border border-purple-200 rounded-xl p-2.5 space-y-2 mt-2">
+                    <span className="text-[11px] font-bold text-purple-900 block">
+                      بەرواری قەرز و کاتی دانەوە بە کۆمپانیا:
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                          بەرواری کڕین:
+                        </label>
+                        <input
+                          type="date"
+                          value={purchaseDebtDate}
+                          onChange={(e) => setPurchaseDebtDate(e.target.value)}
+                          className="w-full px-2 py-1 bg-white border border-purple-200 rounded-lg text-xs font-mono font-bold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                          کاتی دانەوە (مەوعد):
+                        </label>
+                        <input
+                          type="date"
+                          min={purchaseDebtDate}
+                          value={purchaseDueDate}
+                          onChange={(e) => setPurchaseDueDate(e.target.value)}
+                          className="w-full px-2 py-1 bg-white border border-purple-300 rounded-lg text-xs font-mono font-bold text-slate-800"
+                        />
                       </div>
                     </div>
                   </div>

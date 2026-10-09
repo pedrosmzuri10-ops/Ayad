@@ -56,6 +56,7 @@ export const WarehouseTab: React.FC = () => {
   const [editCatNameKu, setEditCatNameKu] = useState('');
   const [editCatNameEn, setEditCatNameEn] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   // New item form state
   const [itemForm, setItemForm] = useState({
@@ -833,9 +834,10 @@ export const WarehouseTab: React.FC = () => {
                         type="button"
                         onClick={() => {
                           if (categories.length <= 1) {
-                            alert('ناتوانیت هەموو جۆرەکان بسڕیتەوە! پێویستە لانیکەم یەک جۆر بمێنێتەوە.');
+                            setCategoryError('ناتوانیت هەموو جۆرەکان بسڕیتەوە! پێویستە لانیکەم یەک جۆر بمێنێتەوە.');
                             return;
                           }
+                          setCategoryError(null);
                           setCategoryToDelete(c);
                         }}
                         className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer"
@@ -848,6 +850,12 @@ export const WarehouseTab: React.FC = () => {
                 );
               })}
             </div>
+
+            {categoryError && (
+              <div className="bg-rose-50 border border-rose-300 rounded-xl p-2.5 text-xs text-rose-800 font-bold text-center">
+                {categoryError}
+              </div>
+            )}
 
             {/* Add new category form */}
             <form onSubmit={handleAddCategory} className="space-y-2 pt-2 border-t border-slate-100">

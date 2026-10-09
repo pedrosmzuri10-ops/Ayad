@@ -74,16 +74,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     URL.revokeObjectURL(url);
   };
 
+  const [importMessage, setImportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const handleApplyImport = () => {
     if (!importText.trim()) return;
     const success = importDataJson(importText.trim());
     if (success) {
-      alert('داتاکان بە سەرکەوتوویی هێنرانە ناوەوە!');
-      setShowImportBox(false);
-      setImportText('');
-      onClose();
+      setImportMessage({ type: 'success', text: 'داتاکان بە سەرکەوتوویی هێنرانە ناوەوە!' });
+      setTimeout(() => {
+        setShowImportBox(false);
+        setImportText('');
+        onClose();
+      }, 1200);
     } else {
-      alert('هەڵەیەک ڕوویدا لە خوێندنەوەی فایلی پاشەکەوت!');
+      setImportMessage({ type: 'error', text: 'هەڵەیەک ڕوویدا لە خوێندنەوەی فایلی پاشەکەوت!' });
     }
   };
 
@@ -222,10 +226,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 placeholder="Paste backup JSON here..."
                 className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-mono"
               />
+              {importMessage && (
+                <div
+                  className={`p-2 rounded-lg text-xs font-bold text-center ${
+                    importMessage.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {importMessage.text}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleApplyImport}
-                className="w-full py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold"
+                className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
               >
                 جێبەجێکردنی هێنانەوە
               </button>

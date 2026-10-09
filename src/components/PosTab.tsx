@@ -17,6 +17,10 @@ import {
   Layers,
   ArrowRight,
   Info,
+  Calendar,
+  Clock,
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PaymentMethod } from '../types';
@@ -42,7 +46,16 @@ export const PosTab: React.FC = () => {
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [cashPaidInput, setCashPaidInput] = useState<string>('');
+  const [debtDate, setDebtDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = useState<string>('');
   const [invoiceNote, setInvoiceNote] = useState<string>('');
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const handleQuickDueDate = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    setDueDate(d.toISOString().split('T')[0]);
+  };
 
   // Quick item search & category filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,6 +64,8 @@ export const PosTab: React.FC = () => {
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
+  const [newCustomerGuarantorName, setNewCustomerGuarantorName] = useState('');
+  const [newCustomerGuarantorPhone, setNewCustomerGuarantorPhone] = useState('');
 
   // Calculations
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
@@ -92,6 +107,8 @@ export const PosTab: React.FC = () => {
       name: newCustomerName.trim(),
       phone: newCustomerPhone.trim() || '-',
       address: newCustomerAddress.trim() || '-',
+      guarantorName: newCustomerGuarantorName.trim() || undefined,
+      guarantorPhone: newCustomerGuarantorPhone.trim() || undefined,
       debt: 0,
     });
     setSelectedCustomerId(created.id);
@@ -99,6 +116,9 @@ export const PosTab: React.FC = () => {
     setNewCustomerName('');
     setNewCustomerPhone('');
     setNewCustomerAddress('');
+    setNewCustomerGuarantorName('');
+    setNewCustomerGuarantorPhone('');
+    setCheckoutError(null);
   };
 
   const handleCheckout = () => {
@@ -109,9 +129,12 @@ export const PosTab: React.FC = () => {
       (paymentMethod === 'debt' || paymentMethod === 'half') &&
       selectedCustomerId === 'cust-cash'
     ) {
-      alert('تکایە ناوی موشتەری دیاریبکە بۆ فرۆشتنی قەرز!');
+      setCheckoutError('تکایە ناوی موشتەری دیاریبکە بۆ فرۆشتنی قەرز! ناتوانیت قەرز بە موشتەری گشتی بدەیت.');
       return;
     }
+
+    setCheckoutError(null);
+    const isDebtSale = paymentMethod === 'debt' || paymentMethod === 'half';
 
     const completedInvoice = completeSale({
       customerId: selectedCustomer.id,
@@ -120,6 +143,8 @@ export const PosTab: React.FC = () => {
       discountPercent,
       paymentMethod,
       cashPaid: paymentMethod === 'half' ? cashPaidVal : undefined,
+      debtDate: isDebtSale ? (debtDate || new Date().toISOString().split('T')[0]) : undefined,
+      dueDate: isDebtSale ? (dueDate.trim() || undefined) : undefined,
       note: invoiceNote,
     });
 
@@ -128,6 +153,8 @@ export const PosTab: React.FC = () => {
     setInvoiceNote('');
     setCashPaidInput('');
     setPaymentMethod('cash');
+    setDebtDate(new Date().toISOString().split('T')[0]);
+    setDueDate('');
 
     // Trigger printable receipt modal
     setViewingInvoice(completedInvoice);
@@ -165,6 +192,19 @@ export const PosTab: React.FC = () => {
               <UserPlus className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Guarantor Info for selected customer */}
+          {selectedCustomer.guarantorName && (
+            <div className="flex items-center gap-1.5 text-xs text-blue-800 bg-blue-50/90 px-2.5 py-1.5 rounded-xl border border-blue-200">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="font-bold">کەفیل (دەستەبەر): {selectedCustomer.guarantorName}</span>
+              {selectedCustomer.guarantorPhone && (
+                <span className="font-mono text-[11px] text-blue-700 font-bold">
+                  • {selectedCustomer.guarantorPhone}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Invoice Items or Empty State */}
@@ -334,6 +374,98 @@ export const PosTab: React.FC = () => {
           </div>
         )}
 
+        {/* Debt Dates: بەرواری وەرگرتنی قەرز & بەرواری دانەوە (کەی قەرزەکەی دەهێنێتەوە) */}
+        {(paymentMethod === 'debt' || paymentMethod === 'half') && (
+          <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between border-b border-amber-200/70 pb-2">
+              <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-amber-600" />
+                <span>دیاریکردنی بەرواری قەرز و کاتی دانەوە</span>
+              </span>
+              <span className="text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-lg font-mono">
+                {formatMoney(paymentMethod === 'debt' ? grandTotal : debtVal)} قەرز
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* بەرواری بردن (قەرز) */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>بەرواری وەرگرتنی قەرز (کەی بردوویەتی):</span>
+                </label>
+                <input
+                  type="date"
+                  value={debtDate}
+                  onChange={(e) => setDebtDate(e.target.value)}
+                  className="w-full py-2 px-2.5 bg-white border border-amber-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-hidden focus:border-amber-500"
+                />
+              </div>
+
+              {/* بەرواری دانەوە (کەی دەهێنێتەوە) */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                  <span>بەرواری دانەوە (کەی قەرزەکەی دەهێنێتەوە):</span>
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  min={debtDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full py-2 px-2.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-hidden focus:border-amber-500"
+                />
+              </div>
+            </div>
+
+            {/* دوگمەکانی خێرای دیاریکردنی کاتی دانەوە */}
+            <div className="pt-1">
+              <span className="text-[11px] font-bold text-amber-900 block mb-1.5">
+                دەستنیشانکردنی خێرای کاتی دانەوە:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickDueDate(7)}
+                  className="px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 transition-colors cursor-pointer"
+                >
+                  +٧ ڕۆژ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDueDate(15)}
+                  className="px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 transition-colors cursor-pointer"
+                >
+                  +١٥ ڕۆژ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDueDate(30)}
+                  className="px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 transition-colors cursor-pointer"
+                >
+                  +١ مانگ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDueDate(60)}
+                  className="px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-bold text-amber-900 transition-colors cursor-pointer"
+                >
+                  +٢ مانگ
+                </button>
+                {dueDate && (
+                  <button
+                    type="button"
+                    onClick={() => setDueDate('')}
+                    className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold text-rose-700 transition-colors cursor-pointer mr-auto"
+                  >
+                    پاککردنەوەی بەرواری دانەوە
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Invoice Note input */}
         <div>
           <input
@@ -344,6 +476,14 @@ export const PosTab: React.FC = () => {
             className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-hidden"
           />
         </div>
+
+        {/* Checkout Error Message */}
+        {checkoutError && (
+          <div className="bg-rose-50 border border-rose-300 rounded-xl p-3 flex items-center gap-2 text-rose-800 text-xs font-bold">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{checkoutError}</span>
+          </div>
+        )}
 
         {/* Big Complete Sale & Print Button */}
         <button
@@ -512,19 +652,51 @@ export const PosTab: React.FC = () => {
                 />
               </div>
 
+              {/* Guarantor Info (کەفیل) */}
+              <div className="bg-indigo-50/70 border border-indigo-200/90 rounded-2xl p-2.5 space-y-2">
+                <span className="text-[11px] font-bold text-indigo-950 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>زانیاری کەفیل (ناوی کەفیل و مۆبایل):</span>
+                </span>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
+                    ناوی کەفیل (کەسی دەستەبەر)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="وەک: کاک هێمن ئەحمەد"
+                    value={newCustomerGuarantorName}
+                    onChange={(e) => setNewCustomerGuarantorName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-indigo-200 rounded-xl text-xs focus:bg-white focus:border-indigo-500 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
+                    ژمارەی مۆبایلی کەفیل
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="0770 000 0000"
+                    value={newCustomerGuarantorPhone}
+                    onChange={(e) => setNewCustomerGuarantorPhone(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-indigo-200 rounded-xl text-xs font-mono focus:bg-white focus:border-indigo-500 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddCustomerOpen(false)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+                  className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 cursor-pointer"
                 >
                   پاشگەزبوونەوە
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
                 >
-                  پاشەکەوتکردن
+                  پاشەکەوتکردن (OK)
                 </button>
               </div>
             </form>

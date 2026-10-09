@@ -129,9 +129,31 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ invoice, onClose }) 
             </div>
 
             {invoice.debtAmount > 0 && (
-              <div className="flex justify-between text-amber-700 font-bold bg-amber-50 p-1.5 rounded-lg">
-                <span className="font-mono">{formatMoney(invoice.debtAmount)}</span>
-                <span>ماوەی قەرز لەم پسوولەیە:</span>
+              <div className="bg-amber-50 p-2 rounded-lg space-y-1 text-right">
+                <div className="flex justify-between text-amber-800 font-bold">
+                  <span className="font-mono">{formatMoney(invoice.debtAmount)}</span>
+                  <span>ماوەی قەرز لەم پسوولەیە:</span>
+                </div>
+                {invoice.debtDate && (
+                  <div className="flex justify-between text-[10px] text-amber-700">
+                    <span className="font-mono font-bold">{invoice.debtDate}</span>
+                    <span>بەرواری وەرگرتنی قەرز:</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[10px] text-slate-700 border-t border-amber-200/60 pt-1">
+                  <span className={`font-mono font-bold ${invoice.dueDate ? 'text-rose-700' : 'text-slate-500'}`}>
+                    {invoice.dueDate || 'دیارینەکراوە'}
+                  </span>
+                  <span className="font-bold">کاتی دانەوەی قەرز (بەڵێن):</span>
+                </div>
+                {invoice.guarantorName && (
+                  <div className="flex justify-between text-[10px] text-indigo-900 border-t border-amber-200/60 pt-1">
+                    <span className="font-bold">
+                      {invoice.guarantorName} {invoice.guarantorPhone ? `(${invoice.guarantorPhone})` : ''}
+                    </span>
+                    <span className="font-semibold text-slate-600">ناوی کەفیل:</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

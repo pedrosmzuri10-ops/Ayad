@@ -87,10 +87,12 @@ interface AppContextType {
   addCustomer: (cust: Omit<Customer, 'id' | 'createdAt'>) => Customer;
   updateCustomer: (cust: Customer) => void;
   deleteCustomer: (id: string) => void;
+  setCustomerDueDate: (customerId: string, dueDate?: string, debtDate?: string) => void;
 
   addSupplier: (sup: Omit<Supplier, 'id' | 'createdAt'>) => Supplier;
   updateSupplier: (sup: Supplier) => void;
   deleteSupplier: (id: string) => void;
+  setSupplierDueDate: (supplierId: string, dueDate?: string, debtDate?: string) => void;
 
   completeSale: (data: {
     customerId: string;
@@ -99,6 +101,8 @@ interface AppContextType {
     discountPercent: number;
     paymentMethod: PaymentMethod;
     cashPaid?: number;
+    debtDate?: string;
+    dueDate?: string;
     note?: string;
   }) => Invoice;
 
@@ -111,6 +115,8 @@ interface AppContextType {
     total: number;
     cashPaid: number;
     debtAmount: number;
+    debtDate?: string;
+    dueDate?: string;
     note?: string;
   }) => PurchaseInvoice;
 
@@ -543,6 +549,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomers((prev) => prev.filter((c) => c.id !== id));
   };
 
+  const setCustomerDueDate = (customerId: string, dueDate?: string, debtDate?: string) => {
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c.id === customerId
+          ? {
+              ...c,
+              dueDate: dueDate !== undefined ? dueDate : c.dueDate,
+              debtDate: debtDate !== undefined ? debtDate : c.debtDate,
+            }
+          : c
+      )
+    );
+  };
+
   // Supplier operations
   const addSupplier = (supData: Omit<Supplier, 'id' | 'createdAt'>): Supplier => {
     const newSup: Supplier = {
@@ -562,6 +582,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSuppliers((prev) => prev.filter((s) => s.id !== id));
   };
 
+  const setSupplierDueDate = (supplierId: string, dueDate?: string, debtDate?: string) => {
+    setSuppliers((prev) =>
+      prev.map((s) =>
+        s.id === supplierId
+          ? {
+              ...s,
+              dueDate: dueDate !== undefined ? dueDate : s.dueDate,
+              debtDate: debtDate !== undefined ? debtDate : s.debtDate,
+            }
+          : s
+      )
+    );
+  };
+
   // Sale completion (POS)
   const completeSale = (data: {
     customerId: string;
@@ -570,6 +604,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     discountPercent: number;
     paymentMethod: PaymentMethod;
     cashPaid?: number;
+    debtDate?: string;
+    dueDate?: string;
     note?: string;
   }): Invoice => {
     const subtotal = data.items.reduce((sum, item) => sum + item.total, 0);
@@ -599,6 +635,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+    const customerObj = customers.find((c) => c.id === data.customerId);
+
     const newInvoice: Invoice = {
       id: `inv-${Date.now()}`,
       invoiceNumber: nextInvNumber,
@@ -615,6 +653,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       paymentMethod: data.paymentMethod,
       cashPaid,
       debtAmount,
+      debtDate: debtAmount > 0 ? (data.debtDate || dateStr) : undefined,
+      dueDate: debtAmount > 0 ? data.dueDate : undefined,
+      guarantorName: customerObj?.guarantorName,
+      guarantorPhone: customerObj?.guarantorPhone,
       note: data.note || '',
     };
 
@@ -636,7 +678,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (debtAmount > 0 && data.customerId !== 'cust-cash') {
       setCustomers((prev) =>
         prev.map((cust) =>
-          cust.id === data.customerId ? { ...cust, debt: cust.debt + debtAmount } : cust
+          cust.id === data.customerId
+            ? {
+                ...cust,
+                debt: cust.debt + debtAmount,
+                debtDate: data.debtDate || dateStr,
+                dueDate: data.dueDate || cust.dueDate,
+              }
+            : cust
         )
       );
     }
@@ -691,6 +740,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     total: number;
     cashPaid: number;
     debtAmount: number;
+    debtDate?: string;
+    dueDate?: string;
     note?: string;
   }): PurchaseInvoice => {
     const nextPINV = `PINV-${900 + purchases.length + 1}`;
@@ -706,6 +757,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       total: data.total,
       cashPaid: data.cashPaid,
       debtAmount: data.debtAmount,
+      debtDate: data.debtAmount > 0 ? (data.debtDate || dateStr) : undefined,
+      dueDate: data.debtAmount > 0 ? data.dueDate : undefined,
       note: data.note,
     };
 
@@ -728,7 +781,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (data.debtAmount > 0) {
       setSuppliers((prev) =>
         prev.map((s) =>
-          s.id === data.supplierId ? { ...s, debt: s.debt + data.debtAmount } : s
+          s.id === data.supplierId
+            ? {
+                ...s,
+                debt: s.debt + data.debtAmount,
+                debtDate: data.debtDate || dateStr,
+                dueDate: data.dueDate || s.dueDate,
+              }
+            : s
         )
       );
     }
@@ -900,9 +960,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        setCustomerDueDate,
         addSupplier,
         updateSupplier,
         deleteSupplier,
+        setSupplierDueDate,
         completeSale,
         deleteInvoice,
         completePurchase,

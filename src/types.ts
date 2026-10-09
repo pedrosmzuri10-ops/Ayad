@@ -29,6 +29,11 @@ export interface Customer {
   address: string;
   debt: number; // in IQD
   createdAt: string;
+  debtDate?: string; // بەرواری وەرگرتنی قەرز (YYYY-MM-DD)
+  dueDate?: string; // بەرواری دانەوە / کەی قەرزەکە دەهێنێتەوە (YYYY-MM-DD)
+  debtNotes?: string;
+  guarantorName?: string; // ناوی کەفیل (ناوی کەسی دەستەبەر)
+  guarantorPhone?: string; // ژمارەی مۆبایلی کەفیل
 }
 
 export interface Supplier {
@@ -38,6 +43,8 @@ export interface Supplier {
   address: string;
   debt: number; // What we owe them in IQD
   createdAt: string;
+  debtDate?: string; // بەرواری قەرز (YYYY-MM-DD)
+  dueDate?: string; // بەرواری دانەوە بە دابینکەر (YYYY-MM-DD)
 }
 
 export type PaymentMethod = 'cash' | 'debt' | 'half';
@@ -70,6 +77,10 @@ export interface Invoice {
   paymentMethod: PaymentMethod;
   cashPaid: number;
   debtAmount: number;
+  debtDate?: string; // بەرواری بردن
+  dueDate?: string; // بەرواری دانەوە / کەی دەهێنێتەوە
+  guarantorName?: string; // ناوی کەفیل
+  guarantorPhone?: string; // مۆبایلی کەفیل
   note?: string;
 }
 
@@ -91,6 +102,8 @@ export interface PurchaseInvoice {
   total: number;
   cashPaid: number;
   debtAmount: number;
+  debtDate?: string;
+  dueDate?: string;
   note?: string;
 }
 

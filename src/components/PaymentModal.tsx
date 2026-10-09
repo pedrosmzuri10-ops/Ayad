@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, HandCoins, ArrowDownLeft, ArrowUpRight, DollarSign } from 'lucide-react';
+import { X, HandCoins, ArrowDownLeft, ArrowUpRight, DollarSign, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { PaymentRecordType } from '../types';
+import { PaymentRecordType, Customer } from '../types';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -30,6 +30,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   });
   const [amount, setAmount] = useState<string>('');
   const [note, setNote] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -43,10 +44,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     const cleanAmount = amount.toString().replace(/,/g, '').trim();
     const numericAmount = parseFloat(cleanAmount);
     if (isNaN(numericAmount) || numericAmount <= 0 || !partyId) {
-      alert('تکایە بڕی پارەی دروست بنووسە!');
+      setError('تکایە بڕی پارەی دروست بنووسە!');
       return;
     }
 
+    setError(null);
     recordPayment({
       type,
       partyType,
@@ -138,11 +140,34 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </select>
           </div>
 
-          {/* Current Debt Badge */}
+          {/* Current Debt & Guarantor Badge */}
           {currentParty && (
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-              <span className="text-slate-500 font-semibold">قەرزی ماوەی هەنووکەیی:</span>
-              <span className="font-black text-amber-700">{formatMoney(currentParty.debt)}</span>
+            <div className="space-y-1.5">
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-semibold">قەرزی ماوەی هەنووکەیی:</span>
+                <span className="font-black text-amber-700">{formatMoney(currentParty.debt)}</span>
+              </div>
+              {partyType === 'customer' && (currentParty as Customer).guarantorName && (
+                <div className="bg-indigo-50/80 p-2 rounded-xl border border-indigo-200/70 flex items-center justify-between text-xs text-indigo-950">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>کەفیل: {(currentParty as Customer).guarantorName}</span>
+                  </div>
+                  {(currentParty as Customer).guarantorPhone && (
+                    <span className="font-mono text-[11px] text-indigo-700 font-bold">
+                      {(currentParty as Customer).guarantorPhone}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Inline Error Banner */}
+          {error && (
+            <div className="bg-rose-50 border border-rose-300 rounded-xl p-2.5 flex items-center gap-2 text-rose-800 text-xs font-bold">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -158,14 +183,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 min="0.01"
                 step="any"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  if (error) setError(null);
+                }}
                 placeholder="10000"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:bg-white focus:border-blue-500 focus:outline-hidden"
               />
               {currentParty && currentParty.debt > 0 && (
                 <button
                   type="button"
-                  onClick={() => setAmount(currentParty.debt.toString())}
+                  onClick={() => {
+                    setAmount(currentParty.debt.toString());
+                    if (error) setError(null);
+                  }}
                   className="absolute left-2 top-2 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold hover:bg-blue-100 cursor-pointer"
                 >
                   هەموو قەرزەکە
@@ -205,7 +236,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   : 'bg-purple-600 hover:bg-purple-700'
               }`}
             >
-              پاشەکەوتکردن
+              پاشەکەوتکردن (OK)
             </button>
           </div>
         </form>
