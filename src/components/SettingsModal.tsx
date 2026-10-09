@@ -9,8 +9,6 @@ import {
   Check,
   ShieldAlert,
   Monitor,
-  Cloud,
-  Smartphone,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { DesktopShortcutModal } from './DesktopShortcutModal';
@@ -27,7 +25,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     exportDataJson,
     importDataJson,
     resetToDefaultData,
-    setIsSyncModalOpen,
   } = useApp();
 
   const [form, setForm] = useState({
@@ -246,22 +243,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           >
             <Monitor className="w-4 h-4 text-blue-600" />
             <span>داگرتنی شۆرتکەت بۆ سەر دێسکتۆپ (Desktop Shortcut / PWA)</span>
-          </button>
-        </div>
-
-        {/* Real-time Mobile & PC Sync */}
-        <div className="pt-3 border-t border-slate-100 space-y-2">
-          <label className="block text-xs font-bold text-slate-700">هاوکاتکردنی مۆبایل و کۆمپیوتەر</label>
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              setIsSyncModalOpen(true);
-            }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all cursor-pointer border border-emerald-200"
-          >
-            <Cloud className="w-4 h-4 text-emerald-600" />
-            <span>بەستنەوەی مۆبایل و کۆمپیوتەر (QR Code و Live Sync)</span>
           </button>
         </div>
 

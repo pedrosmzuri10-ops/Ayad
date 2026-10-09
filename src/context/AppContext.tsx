@@ -137,13 +137,11 @@ interface AppContextType {
   viewingInvoice: Invoice | null;
   setViewingInvoice: (invoice: Invoice | null) => void;
 
-  // Real-time Cross-Device Sync (Computer & Mobile)
+  // Real-time Cross-Device Sync (Automatic via Link)
   syncStatus: SyncStatus;
   deviceType: 'computer' | 'mobile';
   lastSyncTime: Date | null;
   forceSync: () => Promise<void>;
-  isSyncModalOpen: boolean;
-  setIsSyncModalOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -261,7 +259,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connected');
   const [deviceType, setDeviceType] = useState<'computer' | 'mobile'>('computer');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const isApplyingRemoteUpdate = useRef(false);
 
   // Initialize syncService on mount
@@ -924,8 +921,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deviceType,
         lastSyncTime,
         forceSync,
-        isSyncModalOpen,
-        setIsSyncModalOpen,
       }}
     >
       {children}
